@@ -1,0 +1,28 @@
+{
+  "name": "pdf_editor",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "dev": "nodemon index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "base64-arraybuffer": "^1.0.2",
+    "canvas": "^2.11.2",
+    "cors": "^2.8.5",
+    "express": "^4.21.0",
+    "multer": "^1.4.5-lts.1",
+    "nodemon": "^3.1.4",
+    "pdf-image": "^2.0.0",
+    "pdf-lib": "^1.17.1",
+    "pdf-parse": "^1.1.1",
+    "pdf-parse-new": "^1.3.7",
+    "pdf2json": "^3.1.4",
+    "pdfjs-dist": "^4.6.82",
+    "pngjs": "^7.0.0",
+    "tesseract.js": "^5.1.1"
+  }
+}

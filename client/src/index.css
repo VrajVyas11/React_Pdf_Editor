@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+body {
+    min-height: 100vh; /* Sets the minimum height to 100% of the viewport height */
+    max-height: 100vh; /* Ensures the height doesn't exceed the viewport */
+    background: linear-gradient(to right, #6b46c1, #38b2ac, #4299e1); /* Gradient colors */
+  }
+  
+
+
+  

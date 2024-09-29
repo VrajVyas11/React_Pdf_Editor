@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PDF Editor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 20px;
+    }
+    .container {
+      position: relative;
+      overflow: hidden;
+      border: 1px solid #ccc;
+    }
+    canvas {
+      display: block;
+      border: 1px solid #ccc;
+    }
+    .editable-content {
+      position: absolute;
+      top: 0;
+      left: 0;
+      /* transform: translateY(-800px); */
+      width: 100%;
+      height: 100%;
+      border: none;
+      background: transparent;
+      font-family: Arial, sans-serif;
+      white-space: pre-wrap;
+      outline: none;
+      overflow: visible;
+      padding-top: 40px;
+    }
+    .editable-content span {
+      position: relative;
+      white-space: pre;
+    }
+  </style>
+</head>
+<body>
+  <h1>PDF Editor</h1>
+  <input type="file" id="fileInput" accept=".pdf">
+  <button onclick="uploadPdf()">Upload PDF</button>
+  <div class="container">
+    <canvas id="canvas"></canvas>
+    <div id="pdfText" class="editable-content" contenteditable="true"></div>
+  </div>
+
+  <script>
+    async function uploadPdf() {
+      const fileInput = document.getElementById('fileInput');
+      const file = fileInput.files[0];
+      
+      if (!file) {
+        alert('Please select a PDF file first.');
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append('pdf', file);
+
+      try {
+        const response = await fetch('/upload', {
+          method: 'POST',
+          body: formData
+        });
+        const result = await response.json();
+        
+        if (response.ok) {
+          loadExtractedData(result.dataUrl);
+        } else {
+          console.error('Error uploading PDF:', result.error);
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    async function loadExtractedData(url) {
+      try {
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (response.ok) {
+          renderPdfContent(data);
+        } else {
+          console.error('Error loading extracted data');
+        }
+      } catch (error) {
+        console.error('Error:', error);
+      }
+    }
+
+    function renderPdfContent(data) {
+      const canvas = document.getElementById('canvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.querySelector('.container');
+      const editableContent = document.getElementById('pdfText');
+      
+      if (!data.Pages || data.Pages.length === 0) {
+        console.error('No pages found in extracted data');
+        return;
+      }
+
+      // Extract the size of the first page to set the canvas size
+      const page = data.Pages[0];
+      const pdfWidth = 595.276; // Example: A4 width in points
+      const pdfHeight = 841.890; // Example: A4 height in points
+
+      // Set canvas and editable content to match the PDF size
+      canvas.width = pdfWidth;
+      canvas.height = pdfHeight;
+      container.style.width = `${pdfWidth}px`;
+      container.style.height = `${pdfHeight+30}px`;
+
+      // Clear canvas before rendering
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Clear editable content
+      editableContent.innerHTML = '';
+
+      // Render background color if available
+      if (page.Background) {
+        ctx.fillStyle = page.Background;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+      }
+
+      let allTextHtml = '';
+console.log(data.Pages[0].Texts)
+      // Render text and images
+      data.Pages.forEach(page => {
+        if (page.Texts) {
+          page.Texts.forEach(textItem => {
+            const x = textItem.x; // PDF x-coordinate (no scaling for now)
+            const y = textItem.y; // PDF y-coordinate
+            const text = decodeURIComponent(textItem.R[0].T).replace(/%20/g, ' '); // Replace %20 with spaces
+            const fontSize = textItem.R[0].TS[1]; // Font size from PDF
+            const fontFamily = 'Arial, sans-serif'; // Assuming font family is Arial (can change if different)
+            const fontWeight = textItem.R[0].TS[2] ? 'bold' : 'normal'; // Check if bold
+            const textColor = 'black'; // Assuming black color for text
+
+            // Adjust top position for text baseline alignment (subtract a fraction of fontSize)
+            const adjustedTop = y - fontSize * 0.75; // Adjust for baseline (can tweak as necessary)
+
+            // Create a span element with the specific styles
+            const textSpan = `<span style="
+              left: ${x}px;
+              top: ${adjustedTop}px;
+              font-size: ${fontSize}px;
+              font-family: ${fontFamily};
+              font-weight: ${fontWeight};
+              color: ${textColor};
+            ">${text}</span>`;
+
+            // Add text to the editable content
+            allTextHtml += textSpan;
+          });
+        }
+
+        // Render images if available
+        if (page.Images) {
+          page.Images.forEach(imageItem => {
+            const x = imageItem.x || 0;
+            const y = imageItem.y || 0;
+            const width = imageItem.width || 100;
+            const height = imageItem.height || 100;
+            const img = new Image();
+
+            img.src = imageItem.dataUrl;
+            img.onload = () => ctx.drawImage(img, x, y, width, height);
+          });
+        }
+      });
+
+      // Set all styled content to the editable div
+      editableContent.innerHTML = allTextHtml;
+    }
+  </script>
+</body>
+</html>
